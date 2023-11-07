@@ -1,119 +1,144 @@
 package com.rtxct.bot;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
+import com.rtxct.model.Page;
+import com.rtxct.utils.Helper;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 
-/** Bot class */
 @Data
+@AllArgsConstructor
+@Builder
+@Component
+/**
+ * Bot class with crawler logic and methods.
+ */
 public class Bot {
-
 	public static void main(String[] args) {
-		Bot test = new Bot();
-		System.out.println(test.crawl("https://pt.wikipedia.org/wiki/Wikip%C3%A9dia:P%C3%A1gina_principal", 0));
+		// Testing
+		Bot test = new Bot("https://www.wikipedia.org/");
+		System.out.println(test.crawl(1));
 	}
 
+	/** Class properties. */
 	private Queue<String> urlQueue;
+	Queue<String> tempUrlQueue;
 	private List<String> visitedUrls;
-	private List<String> splitedRootUrl;
+	private List<String> pages;
 
-	/** Class constructor */
-	public Bot() {
+	/** Dependencies. */
+	@Autowired
+	private Helper helper = new Helper();
+	@Autowired
+	private Page page;
+
+	/**
+	 * Bot class constructor.
+	 * 
+	 * @param rootUrl The root given URL as a string.
+	 */
+	public Bot(String rootUrl) {
 		this.urlQueue = new LinkedList<String>();
+		this.tempUrlQueue = new LinkedList<String>();
 		this.visitedUrls = new ArrayList<String>();
-		this.splitedRootUrl = new ArrayList<String>();
+		this.pages = new ArrayList<String>();
+
+		urlQueue.add(rootUrl);
 	}
 
-	/** Fetch all the url's in the urlQueue list */
-	public Queue<String> crawl(String rootUrl, int breakpoint) {
-		if (!checkPageAvaliability(rootUrl)) {
-		}
+	/**
+	 * Crwals the given URL finding all the links inside until the breakpoint is
+	 * reached.
+	 * 
+	 * @param breakpoint Integer >= 0 to limit the recursion.
+	 * @return Pages objects in a json representation.
+	 */
+	public List<String> crawl(int breakpoint) {
+		// CLear list before getting in the logic, in case of the list was not empty.
+		tempUrlQueue.clear();
 
-		setSplitedRootUrl(Arrays.asList(rootUrl.split("/")));
-		urlQueue.add(rootUrl);
-		visitedUrls.add(rootUrl);
-
+		// Go through all the links.
 		while (!urlQueue.isEmpty()) {
+			// Remove from the urlQueue list, visited URL.
+			String url = urlQueue.poll();
+			// Add url to the visited URLs list
+			visitedUrls.add(url);
+
+			// Check if the page is online and able to crawl, if not, skip it.
+			if (!helper.checkPageAvaliability(url)) {
+				continue;
+			}
+
 			try {
-				Document doc = Jsoup.connect(rootUrl).get();
+				System.out.println("url");
+				// Get actual URL page and it's children.
+				Document doc = Jsoup.connect(url).get();
+				String title = doc.title();
+				Element descDoc = doc.select("meta[name=description]").first();
 				Elements links = doc.select("a");
 
-				links.forEach(element -> {
-					String href = element.attr("href");
+				// Create a new page object and add to the list as a json.
+				String desc = (descDoc != null) ? descDoc.attr("content") : "";
+				page = new Page(title, desc, url);
+				pages.add(page.toJson());
 
-					if (href.charAt(0) == '/') {
-						href = formatUrl(rootUrl, href);
-					} else if (!visitedUrls.contains(href) && validateURL(href)) {
-						visitedUrls.add(href);
-						urlQueue.add(href);
-					}
-				});
-				urlQueue.remove(rootUrl);
-
-				return urlQueue;
+				// Get new URLs from the source URL.
+				Queue<String> returnedUrls = getBreakpoint(breakpoint, links, url);
+				if (returnedUrls != null) {
+					tempUrlQueue = helper.mergeQueues(urlQueue, returnedUrls);
+				}
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
-		return urlQueue;
+		breakpoint--;
+
+		// If the list is valid, go through all the links in it.
+		if (tempUrlQueue.size() > 0) {
+			urlQueue.addAll(tempUrlQueue);
+			return crawl(breakpoint);
+		}
+
+		return pages;
 	}
 
-	/** Get page availability on connection */
-	private boolean checkPageAvaliability(String url) {
+	private Queue<String> getBreakpoint(int breakpoint, Elements links, String url) {
 		try {
-			Connection.Response page = Jsoup.connect(url).timeout(5000).execute();
-
-			if (page.statusCode() != 200) {
-				return false;
+			if (breakpoint == 0) {
+				return null;
 			}
-			return true;
 
-		} catch (IOException e) {
-			return false;
+			Queue<String> urls = new LinkedList<>();
+			links.forEach(element -> {
+				String href = element.attr("href");
+
+				if (href.length() > 0) {
+					if (href.charAt(0) == '/') {
+						href = helper.formatUrl(url, href);
+					} else if (helper.validateURL(href) && !visitedUrls.contains(href)) {
+						urls.add(href);
+					}
+				}
+			});
+
+			return urls;
 		} catch (Exception e) {
-			return false;
+			e.printStackTrace();
 		}
-	}
-
-	private String formatUrl(String baseUrl, String relativeUrl) {
-		try {
-			URL base = new URL(baseUrl);
-			URL absoluteUrl = new URL(base, relativeUrl);
-
-			return absoluteUrl.toString();
-		} catch (MalformedURLException e) {
-			return relativeUrl;
-		} catch (Exception e) {
-			return relativeUrl;
-		}
-	}
-
-	private boolean validateURL(String url) {
-		try {
-			String rgx = "\\b(https|http):\\/\\/+[^\\s]+[\\\\w]*";
-			Pattern pattern = Pattern.compile(rgx);
-			Matcher match = pattern.matcher(url);
-
-			if (match.matches()) {
-				return true;
-			}
-			return false;
-		} catch (Exception e) {
-			return false;
-		}
+		return null;
 	}
 }
