@@ -31,7 +31,7 @@ public class Bot {
 	public static void main(String[] args) {
 		// Testing
 		Bot test = new Bot("https://www.wikipedia.org/");
-		System.out.println(test.crawl(1));
+		System.out.println(test.crawl(0));
 	}
 
 	/** Class properties. */
@@ -84,7 +84,6 @@ public class Bot {
 			}
 
 			try {
-				System.out.println("url");
 				// Get actual URL page and it's children.
 				Document doc = Jsoup.connect(url).get();
 				String title = doc.title();
@@ -116,29 +115,35 @@ public class Bot {
 		return pages;
 	}
 
+	/**
+	 * If breakpoint is bigger than 0, gets all the links inside the given URLs.
+	 * 
+	 * @param breakpoint Integer >0 to limit the recursion.
+	 * @param links      All the URLs to be accessed.
+	 * @param url        Base URL for validation.
+	 * @return List of all the links founded.
+	 */
 	private Queue<String> getBreakpoint(int breakpoint, Elements links, String url) {
-		try {
-			if (breakpoint == 0) {
-				return null;
-			}
-
-			Queue<String> urls = new LinkedList<>();
-			links.forEach(element -> {
-				String href = element.attr("href");
-
-				if (href.length() > 0) {
-					if (href.charAt(0) == '/') {
-						href = helper.formatUrl(url, href);
-					} else if (helper.validateURL(href) && !visitedUrls.contains(href)) {
-						urls.add(href);
-					}
-				}
-			});
-
-			return urls;
-		} catch (Exception e) {
-			e.printStackTrace();
+		// Check breakpoint value.
+		if (breakpoint == 0) {
+			return null;
 		}
-		return null;
+
+		// Gets all the links in each URLs inside the given list.
+		Queue<String> urls = new LinkedList<>();
+		links.forEach(element -> {
+			String href = element.attr("href");
+
+			// Validate link and add to the temporary list.
+			if (href.length() > 0) {
+				if (href.charAt(0) == '/') {
+					href = helper.formatUrl(url, href);
+				} else if (helper.validateURL(href) && !visitedUrls.contains(href)) {
+					urls.add(href);
+				}
+			}
+		});
+
+		return urls;
 	}
 }
