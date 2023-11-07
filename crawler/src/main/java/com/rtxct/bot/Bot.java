@@ -61,7 +61,7 @@ public class Bot {
 	}
 
 	/**
-	 * Crwals the given URL finding all the links inside until the breakpoint is
+	 * Crawls the given URL finding all the links inside until the breakpoint is
 	 * reached.
 	 * 
 	 * @param breakpoint Integer >= 0 to limit the recursion.
