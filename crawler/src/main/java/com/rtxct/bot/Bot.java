@@ -31,32 +31,61 @@ import lombok.Data;
 public class Bot {
 	public static void main(String[] args) {
 		// Testing
-		Bot test = new Bot("https://www.wikipedia.org/");
-		System.out.println(test.crawl(0));
+		Bot test = new Bot("https://www.wikipedia.org/", 0);
+		System.out.println(test.crawlSync());
 	}
 
 	/** Class properties. */
-	private Queue<String> urlQueue;
-	Queue<String> tempUrlQueue;
-	private List<String> visitedUrls;
+	@Builder.Default
+	private int breakpoint = 0;
+
 	private List<String> pages;
+
+	private List<String> visitedUrls;
+
+	private Queue<String> tempUrlQueue;
+
+	private Queue<String> urlQueue;
 
 	/** Dependencies. */
 	@Autowired
 	private Helper helper = new Helper();
+
 	@Autowired
 	private Page page;
 
 	/**
-	 * Bot class constructor.
+	 * Bot class constructor with.
+	 * 
+	 * @param rootUrl    Single URL as a String.
+	 * @param breakpoint Limit how deep in the URLs the program should go.
+	 */
+	public Bot(String rootUrl, int breakpoint) {
+		this.breakpoint = breakpoint;
+		this.urlQueue = new LinkedList<String>(Arrays.asList(rootUrl));
+		propertiesInitializer();
+	}
+
+	/**
+	 * Bot class constructor with.
 	 * 
 	 * @param rootUrl Single URL as a String.
 	 */
 	public Bot(String rootUrl) {
 		this.urlQueue = new LinkedList<String>(Arrays.asList(rootUrl));
-		this.tempUrlQueue = new LinkedList<String>();
-		this.visitedUrls = new ArrayList<String>();
-		this.pages = new ArrayList<String>();
+		propertiesInitializer();
+	}
+
+	/**
+	 * Bot class constructor.
+	 * 
+	 * @param rootUrlList List of URLs as Strings.
+	 * @param breakpoint  Limit how deep in the URLs the program should go.
+	 */
+	public Bot(List<String> rootUrlList, int breakpoint) {
+		this.breakpoint = breakpoint;
+		this.urlQueue = new LinkedList<String>(rootUrlList);
+		propertiesInitializer();
 	}
 
 	/**
@@ -66,48 +95,86 @@ public class Bot {
 	 */
 	public Bot(List<String> rootUrlList) {
 		this.urlQueue = new LinkedList<String>(rootUrlList);
-		this.tempUrlQueue = new LinkedList<String>();
-		this.visitedUrls = new ArrayList<String>();
-		this.pages = new ArrayList<String>();
+		propertiesInitializer();
 	}
 
 	/**
-	 * Crawls the given URL finding all the links inside until the breakpoint is
+	 * Initializes the class properties.
+	 */
+	private void propertiesInitializer() {
+		this.visitedUrls = new ArrayList<String>();
+		this.pages = new ArrayList<String>();
+		this.tempUrlQueue = new LinkedList<String>();
+	}
+
+	/**
+	 * Crawls within threads the given URL finding all the links inside until the
+	 * breakpoint is
 	 * reached.
 	 * 
-	 * @param breakpoint Integer >= 0 to limit the recursion.
 	 * @return Pages objects in a json representation.
 	 */
-	public List<String> crawl(int breakpoint) {
-		// CLear list before getting in the logic, in case of the list was not empty.
+	public List<String> crawlAsync() {
 		tempUrlQueue.clear();
 
-		// Go through all the links.
+		scrapeLinksAsync();
+
+		breakpoint--;
+
+		if (tempUrlQueue.size() > 0) {
+			urlQueue.addAll(tempUrlQueue);
+			return crawlAsync();
+		}
+
+		return pages;
+	}
+
+	/**
+	 * Crawls synchronously the given URL finding all the links inside until the
+	 * breakpoint is
+	 * reached.
+	 * 
+	 * @return Pages objects in a json representation.
+	 */
+	public List<String> crawlSync() {
+		tempUrlQueue.clear();
+
+		scrapeLinksSync();
+
+		breakpoint--;
+
+		if (tempUrlQueue.size() > 0) {
+			urlQueue.addAll(tempUrlQueue);
+			return crawlSync();
+		}
+
+		return pages;
+	}
+
+	private void scrapeLinksAsync() {
+
+	}
+
+	private void scrapeLinksSync() {
 		while (!urlQueue.isEmpty()) {
-			// Remove from the urlQueue list, visited URL.
 			String url = urlQueue.poll();
-			// Add url to the visited URLs list
 			visitedUrls.add(url);
 
-			// Check if the page is online and able to crawl, if not, skip it.
 			if (!helper.checkPageAvaliability(url)) {
 				continue;
 			}
 
 			try {
-				// Get actual URL page and it's children.
 				Document doc = Jsoup.connect(url).get();
 				String title = doc.title();
 				Element descDoc = doc.select("meta[name=description]").first();
 				Elements links = doc.select("a");
 
-				// Create a new page object and add to the list as a json.
 				String desc = (descDoc != null) ? descDoc.attr("content") : "";
 				page = new Page(title, desc, url);
 				pages.add(page.toJson());
 
-				// Get new URLs from the source URL.
-				Queue<String> returnedUrls = getBreakpoint(breakpoint, links, url);
+				Queue<String> returnedUrls = getBreakpoint(links, url);
 				if (returnedUrls != null) {
 					tempUrlQueue = helper.mergeQueues(urlQueue, returnedUrls);
 				}
@@ -115,37 +182,24 @@ public class Bot {
 				e.printStackTrace();
 			}
 		}
-		breakpoint--;
-
-		// If the list is valid, go through all the links in it.
-		if (tempUrlQueue.size() > 0) {
-			urlQueue.addAll(tempUrlQueue);
-			return crawl(breakpoint);
-		}
-
-		return pages;
 	}
 
 	/**
 	 * If breakpoint is bigger than 0, gets all the links inside the given URLs.
 	 * 
-	 * @param breakpoint Integer >=0 to limit the recursion.
-	 * @param links      All the URLs to be accessed.
-	 * @param url        Base URL for validation.
+	 * @param links All the URLs to be accessed.
+	 * @param url   Base URL for validation.
 	 * @return List of all the links founded.
 	 */
-	private Queue<String> getBreakpoint(int breakpoint, Elements links, String url) {
-		// Check breakpoint value.
+	private Queue<String> getBreakpoint(Elements links, String url) {
 		if (breakpoint == 0) {
 			return null;
 		}
 
-		// Gets all the links in each URLs inside the given list.
 		Queue<String> urls = new LinkedList<>();
 		links.forEach(element -> {
 			String href = element.attr("href");
 
-			// Validate link and add to the temporary list.
 			if (href.length() > 0) {
 				if (href.charAt(0) == '/') {
 					href = helper.formatUrl(url, href);
