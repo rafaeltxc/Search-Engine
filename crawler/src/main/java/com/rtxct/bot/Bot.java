@@ -2,6 +2,7 @@ package com.rtxct.bot;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
@@ -49,15 +50,25 @@ public class Bot {
 	/**
 	 * Bot class constructor.
 	 * 
-	 * @param rootUrl The root given URL as a string.
+	 * @param rootUrl Single URL as a String.
 	 */
 	public Bot(String rootUrl) {
-		this.urlQueue = new LinkedList<String>();
+		this.urlQueue = new LinkedList<String>(Arrays.asList(rootUrl));
 		this.tempUrlQueue = new LinkedList<String>();
 		this.visitedUrls = new ArrayList<String>();
 		this.pages = new ArrayList<String>();
+	}
 
-		urlQueue.add(rootUrl);
+	/**
+	 * Bot class constructor.
+	 * 
+	 * @param rootUrlList List of URLs as Strings.
+	 */
+	public Bot(List<String> rootUrlList) {
+		this.urlQueue = new LinkedList<String>(rootUrlList);
+		this.tempUrlQueue = new LinkedList<String>();
+		this.visitedUrls = new ArrayList<String>();
+		this.pages = new ArrayList<String>();
 	}
 
 	/**
@@ -118,7 +129,7 @@ public class Bot {
 	/**
 	 * If breakpoint is bigger than 0, gets all the links inside the given URLs.
 	 * 
-	 * @param breakpoint Integer >0 to limit the recursion.
+	 * @param breakpoint Integer >=0 to limit the recursion.
 	 * @param links      All the URLs to be accessed.
 	 * @param url        Base URL for validation.
 	 * @return List of all the links founded.
