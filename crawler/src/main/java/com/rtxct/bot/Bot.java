@@ -34,14 +34,14 @@ import lombok.Data;
 public class Bot {
 	public static void main(String[] args) {
 		// Testing
-		Bot test = new Bot(Arrays.asList("https://www.wikipedia.org/", "https://www.youtube.com/"), 1);
-		System.out.println(test.crawlAsync());
+		Bot test = new Bot(Arrays.asList("https://www.wikipedia.org/", "https://www.youtube.com/"), 5);
+		System.out.println(test.crawlSync());
 	}
 
 	/** Class properties. */
-	private ExecutorService executorService;
-
 	private final Semaphore semaphore = new Semaphore(1);
+
+	private ExecutorService executorService;
 
 	private int breakpoint;
 
@@ -112,10 +112,11 @@ public class Bot {
 	}
 
 	/**
-	 * Start async crawling process with actual number of system threads.
+	 * Crawls within threads the given URL, finding
+	 * all the links inside it until the breakpoint is reached. The numbers of
+	 * threads will be the same as the system's number.
 	 * 
-	 * @param maxThreads The maximum number of threads.
-	 * @return Crawler function.
+	 * @return Pages objects in a json representation.
 	 */
 	public List<String> crawlAsync() {
 		int systemCores = Runtime.getRuntime().availableProcessors();
@@ -123,34 +124,15 @@ public class Bot {
 	}
 
 	/**
-	 * Start async crawling process with custom number of threads.
+	 * Crawls within threads the given URL, finding
+	 * all the links inside it until the breakpoint is reached. The number of
+	 * threads will be represented by the maxThreads parameter.
 	 * 
 	 * @param maxThreads The maximum number of threads.
-	 * @return Crawler function.
+	 * @return Pages objects in a json representation.
 	 */
 	public List<String> crawlAsync(int maxThreads) {
 		executorService = Executors.newFixedThreadPool(maxThreads);
-
-		List<String> pages = crawlerAsync();
-		return pages;
-	}
-
-	/**
-	 * Start synchronous crawling process.
-	 * 
-	 * @return Crawler function.
-	 */
-	public List<String> crawlSync() {
-		return crawlerSync();
-	}
-
-	/**
-	 * Crawls within threads the given URL, finding
-	 * all the links inside it until the breakpoint is reached.
-	 * 
-	 * @return Pages objects in a json representation.
-	 */
-	private List<String> crawlerAsync() {
 		tempUrlQueue.clear();
 
 		scrapeLinksAsync();
@@ -158,7 +140,7 @@ public class Bot {
 
 		if (tempUrlQueue.size() > 0) {
 			urlQueue.addAll(tempUrlQueue);
-			return crawlerAsync();
+			return crawlAsync(maxThreads);
 		}
 
 		return pages;
@@ -170,7 +152,7 @@ public class Bot {
 	 * 
 	 * @return Pages objects in a json representation.
 	 */
-	private List<String> crawlerSync() {
+	public List<String> crawlSync() {
 		tempUrlQueue.clear();
 
 		scrapeLinksSync();
@@ -179,7 +161,7 @@ public class Bot {
 
 		if (tempUrlQueue.size() > 0) {
 			urlQueue.addAll(tempUrlQueue);
-			return crawlerSync();
+			return crawlSync();
 		}
 
 		return pages;
@@ -196,6 +178,7 @@ public class Bot {
 
 			try {
 				executorService.execute(() -> {
+					System.out.println(Thread.activeCount());
 					try {
 						Document doc = Jsoup.connect(url).get();
 						String title = doc.title();
