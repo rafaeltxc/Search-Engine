@@ -15,14 +15,12 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.rtxct.model.Page;
 import com.rtxct.utils.Helper;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 
 @Data
@@ -54,10 +52,8 @@ public class Bot {
 	private Queue<String> urlQueue;
 
 	/** Class Dependencies. */
-	@Autowired
 	private Helper helper = new Helper();
 
-	@Autowired
 	private Page page;
 
 	/**
@@ -178,7 +174,6 @@ public class Bot {
 
 			try {
 				executorService.execute(() -> {
-					System.out.println(Thread.activeCount());
 					try {
 						Document doc = Jsoup.connect(url).get();
 						String title = doc.title();
