@@ -163,6 +163,12 @@ public class Bot {
 		return pages;
 	}
 
+	/**
+	 * Loop through the URLs list, scraping the needed data and setting it to the
+	 * corresponding global property. If the breakpoint is bigger than zero, get all
+	 * links inside the URLs, and also set it to the corresponding global
+	 * property for the next iteration.
+	 */
 	private void scrapeLinksAsync() {
 		while (!urlQueue.isEmpty()) {
 			String url = urlQueue.poll();
@@ -212,6 +218,12 @@ public class Bot {
 		}
 	}
 
+	/**
+	 * Loop through the URLs list, scraping the needed data and setting it to the
+	 * corresponding global property. If the breakpoint is bigger than zero, get all
+	 * links inside the URLs, and also set it to the corresponding global
+	 * property for the next iteration.
+	 */
 	private void scrapeLinksSync() {
 		while (!urlQueue.isEmpty()) {
 			String url = urlQueue.poll();
