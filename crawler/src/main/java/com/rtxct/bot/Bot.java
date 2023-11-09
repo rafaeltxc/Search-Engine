@@ -6,6 +6,10 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -23,7 +27,6 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-@Builder
 @Component
 /**
  * Bot class with crawler logic and methods.
@@ -31,13 +34,16 @@ import lombok.Data;
 public class Bot {
 	public static void main(String[] args) {
 		// Testing
-		Bot test = new Bot("https://www.wikipedia.org/", 0);
-		System.out.println(test.crawlSync());
+		Bot test = new Bot(Arrays.asList("https://www.wikipedia.org/", "https://www.youtube.com/"), 1);
+		System.out.println(test.crawlAsync());
 	}
 
 	/** Class properties. */
-	@Builder.Default
-	private int breakpoint = 0;
+	private ExecutorService executorService;
+
+	private final Semaphore semaphore = new Semaphore(1);
+
+	private int breakpoint;
 
 	private List<String> pages;
 
@@ -47,12 +53,21 @@ public class Bot {
 
 	private Queue<String> urlQueue;
 
-	/** Dependencies. */
+	/** Class Dependencies. */
 	@Autowired
 	private Helper helper = new Helper();
 
 	@Autowired
 	private Page page;
+
+	/**
+	 * Bot class constructor with.
+	 * 
+	 * @param rootUrl Single URL as a String.
+	 */
+	public Bot(String rootUrl) {
+		this(rootUrl, 0);
+	}
 
 	/**
 	 * Bot class constructor with.
@@ -67,13 +82,12 @@ public class Bot {
 	}
 
 	/**
-	 * Bot class constructor with.
+	 * Bot class constructor.
 	 * 
-	 * @param rootUrl Single URL as a String.
+	 * @param rootUrlList List of URLs as Strings.
 	 */
-	public Bot(String rootUrl) {
-		this.urlQueue = new LinkedList<String>(Arrays.asList(rootUrl));
-		propertiesInitializer();
+	public Bot(List<String> rootUrlList) {
+		this(rootUrlList, 0);
 	}
 
 	/**
@@ -89,16 +103,6 @@ public class Bot {
 	}
 
 	/**
-	 * Bot class constructor.
-	 * 
-	 * @param rootUrlList List of URLs as Strings.
-	 */
-	public Bot(List<String> rootUrlList) {
-		this.urlQueue = new LinkedList<String>(rootUrlList);
-		propertiesInitializer();
-	}
-
-	/**
 	 * Initializes the class properties.
 	 */
 	private void propertiesInitializer() {
@@ -108,22 +112,53 @@ public class Bot {
 	}
 
 	/**
-	 * Crawls within threads the given URL finding all the links inside until the
-	 * breakpoint is
-	 * reached.
+	 * Start async crawling process with actual number of system threads.
+	 * 
+	 * @param maxThreads The maximum number of threads.
+	 * @return Crawler function.
+	 */
+	public List<String> crawlAsync() {
+		int systemCores = Runtime.getRuntime().availableProcessors();
+		return crawlAsync(systemCores);
+	}
+
+	/**
+	 * Start async crawling process with custom number of threads.
+	 * 
+	 * @param maxThreads The maximum number of threads.
+	 * @return Crawler function.
+	 */
+	public List<String> crawlAsync(int maxThreads) {
+		executorService = Executors.newFixedThreadPool(maxThreads);
+
+		List<String> pages = crawlerAsync();
+		return pages;
+	}
+
+	/**
+	 * Start synchronous crawling process.
+	 * 
+	 * @return Crawler function.
+	 */
+	public List<String> crawlSync() {
+		return crawlerSync();
+	}
+
+	/**
+	 * Crawls within threads the given URL, finding
+	 * all the links inside it until the breakpoint is reached.
 	 * 
 	 * @return Pages objects in a json representation.
 	 */
-	public List<String> crawlAsync() {
+	private List<String> crawlerAsync() {
 		tempUrlQueue.clear();
 
 		scrapeLinksAsync();
-
 		breakpoint--;
 
 		if (tempUrlQueue.size() > 0) {
 			urlQueue.addAll(tempUrlQueue);
-			return crawlAsync();
+			return crawlerAsync();
 		}
 
 		return pages;
@@ -131,12 +166,11 @@ public class Bot {
 
 	/**
 	 * Crawls synchronously the given URL finding all the links inside until the
-	 * breakpoint is
-	 * reached.
+	 * breakpoint is reached.
 	 * 
 	 * @return Pages objects in a json representation.
 	 */
-	public List<String> crawlSync() {
+	private List<String> crawlerSync() {
 		tempUrlQueue.clear();
 
 		scrapeLinksSync();
@@ -145,14 +179,59 @@ public class Bot {
 
 		if (tempUrlQueue.size() > 0) {
 			urlQueue.addAll(tempUrlQueue);
-			return crawlSync();
+			return crawlerSync();
 		}
 
 		return pages;
 	}
 
 	private void scrapeLinksAsync() {
+		while (!urlQueue.isEmpty()) {
+			String url = urlQueue.poll();
+			visitedUrls.add(url);
 
+			if (!helper.checkPageAvaliability(url)) {
+				continue;
+			}
+
+			try {
+				executorService.execute(() -> {
+					try {
+						Document doc = Jsoup.connect(url).get();
+						String title = doc.title();
+						Element descDoc = doc.select("meta[name=description]").first();
+
+						String desc = (descDoc != null) ? descDoc.attr("content") : "";
+						page = new Page(title, desc, url);
+						pages.add(page.toJson());
+
+						Queue<String> returnedUrls = getBreakpoint(doc, url);
+						if (returnedUrls != null) {
+							try {
+								semaphore.acquire();
+								tempUrlQueue = helper.mergeQueues(urlQueue, returnedUrls);
+							} catch (InterruptedException e) {
+								Thread.currentThread().interrupt();
+							} finally {
+								semaphore.release();
+							}
+						}
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				});
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+
+		executorService.shutdown();
+
+		try {
+			executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+		}
 	}
 
 	private void scrapeLinksSync() {
@@ -168,13 +247,12 @@ public class Bot {
 				Document doc = Jsoup.connect(url).get();
 				String title = doc.title();
 				Element descDoc = doc.select("meta[name=description]").first();
-				Elements links = doc.select("a");
 
 				String desc = (descDoc != null) ? descDoc.attr("content") : "";
 				page = new Page(title, desc, url);
 				pages.add(page.toJson());
 
-				Queue<String> returnedUrls = getBreakpoint(links, url);
+				Queue<String> returnedUrls = getBreakpoint(doc, url);
 				if (returnedUrls != null) {
 					tempUrlQueue = helper.mergeQueues(urlQueue, returnedUrls);
 				}
@@ -191,10 +269,12 @@ public class Bot {
 	 * @param url   Base URL for validation.
 	 * @return List of all the links founded.
 	 */
-	private Queue<String> getBreakpoint(Elements links, String url) {
+	private Queue<String> getBreakpoint(Document doc, String url) {
 		if (breakpoint == 0) {
 			return null;
 		}
+
+		Elements links = doc.select("a");
 
 		Queue<String> urls = new LinkedList<>();
 		links.forEach(element -> {
