@@ -20,11 +20,12 @@ import org.springframework.stereotype.Component;
 import com.rtxct.model.Page;
 import com.rtxct.utils.Helper;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
-@AllArgsConstructor
+@Getter(AccessLevel.PUBLIC)
+@Setter(AccessLevel.NONE)
 @Component
 /**
  * Bot class with crawler logic and methods.
@@ -32,8 +33,8 @@ import lombok.Data;
 public class Bot {
 	public static void main(String[] args) {
 		// Testing
-		Bot test = new Bot(Arrays.asList("https://www.wikipedia.org/", "https://www.youtube.com/"), 5);
-		System.out.println(test.crawlSync());
+		Bot test = new Bot(Arrays.asList("https://www.wikipedia.org/", "https://www.youtube.com/"), 1);
+		System.out.println(test.crawlAsync());
 	}
 
 	/** Class properties. */
@@ -128,18 +129,19 @@ public class Bot {
 	 * @return Pages objects in a json representation.
 	 */
 	public List<String> crawlAsync(int maxThreads) {
-		executorService = Executors.newFixedThreadPool(maxThreads);
-		tempUrlQueue.clear();
+
+		this.executorService = Executors.newFixedThreadPool(maxThreads);
+		this.tempUrlQueue.clear();
 
 		scrapeLinksAsync();
-		breakpoint--;
+		this.breakpoint--;
 
-		if (tempUrlQueue.size() > 0) {
+		if (this.tempUrlQueue.size() > 0) {
 			urlQueue.addAll(tempUrlQueue);
 			return crawlAsync(maxThreads);
 		}
 
-		return pages;
+		return this.pages;
 	}
 
 	/**
@@ -149,18 +151,19 @@ public class Bot {
 	 * @return Pages objects in a json representation.
 	 */
 	public List<String> crawlSync() {
-		tempUrlQueue.clear();
+
+		this.tempUrlQueue.clear();
 
 		scrapeLinksSync();
 
-		breakpoint--;
+		this.breakpoint--;
 
 		if (tempUrlQueue.size() > 0) {
-			urlQueue.addAll(tempUrlQueue);
+			this.urlQueue.addAll(tempUrlQueue);
 			return crawlSync();
 		}
 
-		return pages;
+		return this.pages;
 	}
 
 	/**
@@ -170,16 +173,16 @@ public class Bot {
 	 * property for the next iteration.
 	 */
 	private void scrapeLinksAsync() {
-		while (!urlQueue.isEmpty()) {
-			String url = urlQueue.poll();
-			visitedUrls.add(url);
+		while (!this.urlQueue.isEmpty()) {
+			String url = this.urlQueue.poll();
+			this.visitedUrls.add(url);
 
 			if (!helper.checkPageAvaliability(url)) {
 				continue;
 			}
 
 			try {
-				executorService.execute(() -> {
+				this.executorService.execute(() -> {
 					try {
 						Document doc = Jsoup.connect(url).get();
 						String title = doc.title();
@@ -187,17 +190,17 @@ public class Bot {
 
 						String desc = (descDoc != null) ? descDoc.attr("content") : "";
 						page = new Page(title, desc, url);
-						pages.add(page.toJson());
+						this.pages.add(page.toJson());
 
-						Queue<String> returnedUrls = getBreakpoint(doc, url);
+						Queue<String> returnedUrls = getLinks(doc, url);
 						if (returnedUrls != null) {
 							try {
-								semaphore.acquire();
-								tempUrlQueue = helper.mergeQueues(urlQueue, returnedUrls);
+								this.semaphore.acquire();
+								this.tempUrlQueue = helper.mergeQueues(this.urlQueue, returnedUrls);
 							} catch (InterruptedException e) {
 								Thread.currentThread().interrupt();
 							} finally {
-								semaphore.release();
+								this.semaphore.release();
 							}
 						}
 					} catch (IOException e) {
@@ -209,10 +212,10 @@ public class Bot {
 			}
 		}
 
-		executorService.shutdown();
+		this.executorService.shutdown();
 
 		try {
-			executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+			this.executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
 		}
@@ -225,9 +228,9 @@ public class Bot {
 	 * property for the next iteration.
 	 */
 	private void scrapeLinksSync() {
-		while (!urlQueue.isEmpty()) {
-			String url = urlQueue.poll();
-			visitedUrls.add(url);
+		while (!this.urlQueue.isEmpty()) {
+			String url = this.urlQueue.poll();
+			this.visitedUrls.add(url);
 
 			if (!helper.checkPageAvaliability(url)) {
 				continue;
@@ -240,11 +243,11 @@ public class Bot {
 
 				String desc = (descDoc != null) ? descDoc.attr("content") : "";
 				page = new Page(title, desc, url);
-				pages.add(page.toJson());
+				this.pages.add(page.toJson());
 
-				Queue<String> returnedUrls = getBreakpoint(doc, url);
+				Queue<String> returnedUrls = getLinks(doc, url);
 				if (returnedUrls != null) {
-					tempUrlQueue = helper.mergeQueues(urlQueue, returnedUrls);
+					this.tempUrlQueue = helper.mergeQueues(this.urlQueue, returnedUrls);
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -255,12 +258,12 @@ public class Bot {
 	/**
 	 * If breakpoint is bigger than 0, gets all the links inside the given URLs.
 	 * 
-	 * @param links All the URLs to be accessed.
-	 * @param url   Base URL for validation.
+	 * @param doc Document to retrieve links from.
+	 * @param url Base URL for validation.
 	 * @return List of all the links founded.
 	 */
-	private Queue<String> getBreakpoint(Document doc, String url) {
-		if (breakpoint == 0) {
+	private Queue<String> getLinks(Document doc, String url) {
+		if (this.breakpoint == 0) {
 			return null;
 		}
 
