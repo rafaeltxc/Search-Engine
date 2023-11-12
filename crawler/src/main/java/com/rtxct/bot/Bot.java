@@ -58,7 +58,7 @@ public class Bot {
 	private Page page;
 
 	/**
-	 * Bot class constructor with.
+	 * Bot class constructor.
 	 * 
 	 * @param rootUrl Single URL as a String.
 	 */
@@ -67,7 +67,7 @@ public class Bot {
 	}
 
 	/**
-	 * Bot class constructor with.
+	 * Bot class constructor.
 	 * 
 	 * @param rootUrl    Single URL as a String.
 	 * @param breakpoint Limit how deep in the URLs the program should go.

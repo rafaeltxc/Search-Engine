@@ -5,7 +5,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.springframework.boot.test.context.TestComponent;
-import org.springframework.util.Assert;
 
 import com.rtxct.bot.Bot;
 

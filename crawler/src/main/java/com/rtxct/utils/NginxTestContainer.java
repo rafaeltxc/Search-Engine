@@ -7,8 +7,7 @@ import java.io.PrintStream;
 import java.net.MalformedURLException;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.CountDownLatch;
 
 import org.springframework.stereotype.Component;
 import org.testcontainers.containers.NginxContainer;
@@ -21,24 +20,17 @@ import lombok.Data;
 @SuppressWarnings({ "resource" })
 public class NginxTestContainer {
 
-  public static void main(String[] args) {
-    new NginxTestContainer();
-
-    // while (true) {
-    // try {
-    // Thread.sleep(1000);
-    // } catch (InterruptedException e) {
-    // e.printStackTrace();
-    // break;
-    // }
-    // }
-  }
-
   private NginxContainer<?> nginx;
-  private ExecutorService executorService = Executors.newSingleThreadExecutor();
+  private CountDownLatch countDown = new CountDownLatch(1);
   private String tmpDirectory = String.format("%s/Search-Engine/crawler/src/main/resources/templates/",
       System.getProperty("user.dir"));
 
+  /**
+   * NginxTestContainer class constructor.
+   * 
+   * Create server configuration, start it, and after the container is up,
+   * configure the nginx html pages.
+   */
   public NginxTestContainer() {
     try {
       this.createServer();
@@ -50,23 +42,43 @@ public class NginxTestContainer {
       future.get();
 
       this.pagesConfig();
+      this.awaitTermination();
     } catch (Exception e) {
       e.printStackTrace();
     }
 
   }
 
+  /**
+   * Start Nginx testContainer.
+   */
   public void startContainer() {
-    this.nginx.start();
-  }
-
-  public void stopContainer() {
-    if (nginx != null) {
-      this.nginx.close();
-      this.executorService.shutdown();
+    try {
+      this.nginx.start();
+    } catch (Exception e) {
+      e.printStackTrace();
     }
   }
 
+  /**
+   * Stop Nginx testContainer.
+   */
+  public void stopContainer() {
+    try {
+      if (nginx != null) {
+        this.nginx.close();
+        this.countDown.countDown();
+      }
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+
+  /**
+   * Get container hosted port number.
+   * 
+   * @return Port number as String.
+   */
   public String getServerPort() {
     try {
       return nginx.getBaseUrl("http", 80).toString();
@@ -76,15 +88,33 @@ public class NginxTestContainer {
     return null;
   }
 
+  /**
+   * Holds the container up until it reaches the closing command.
+   */
+  public void awaitTermination() {
+    try {
+      countDown.await();
+    } catch (Exception e) {
+      Thread.currentThread().interrupt();
+      e.printStackTrace();
+    }
+  }
+
+  /**
+   * Create and configure new Nginx testContainer.
+   */
   private void createServer() {
     this.nginx = new NginxContainer<>("nginx:1.20")
         .withFileSystemBind(tmpDirectory, "/usr/share/nginx/html")
         .withExposedPorts(80)
         .waitingFor(Wait.forHttp("/")
             .forStatusCode(403))
-        .withStartupTimeout(Duration.ofSeconds(10));
+        .withStartupTimeout(Duration.ofSeconds(15));
   }
 
+  /**
+   * Configures temporary html files for Nginx testContainer usage.
+   */
   private void pagesConfig() {
     try {
       File indexFile = new File(tmpDirectory, "index.html");
