@@ -18,8 +18,8 @@ import com.google.gson.JsonParser;
 import com.rtxct.bot.Bot;
 import com.rtxct.utils.NginxTestContainer;
 
-@TestInstance(Lifecycle.PER_CLASS)
 @TestComponent
+@TestInstance(Lifecycle.PER_CLASS)
 public class BotTests {
 
   /** Properties */

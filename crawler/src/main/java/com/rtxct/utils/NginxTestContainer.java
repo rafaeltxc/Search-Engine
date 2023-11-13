@@ -22,10 +22,6 @@ import lombok.Data;
 @Component
 public class NginxTestContainer {
 
-  public static void main(String[] args) {
-    new NginxTestContainer();
-  }
-
   /** Class properties */
   private NginxContainer<?> nginx;
 

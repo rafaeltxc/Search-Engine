@@ -12,11 +12,11 @@ import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.springframework.stereotype.Component;
 
-@Component
 /**
- * Helper class with separed methods to be used throughout the whole
+ * Helper class with separated methods to be used throughout the whole
  * application.
  */
+@Component
 public class Helper {
   /**
    * Connects to the given URL and returns a boolean indicating whether the
@@ -25,7 +25,7 @@ public class Helper {
    * @param url String URL to connect to.
    * @return boolean indicating whether the connection was successful or not.
    */
-  public boolean checkPageAvaliability(String url) {
+  public boolean checkPageAvailability(String url) {
     try {
       Connection.Response page = Jsoup.connect(url).timeout(5000).execute();
 

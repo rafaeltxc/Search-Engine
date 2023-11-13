@@ -172,7 +172,7 @@ public class Bot {
 			String url = this.urlQueue.poll();
 			this.visitedUrls.add(url);
 
-			if (!helper.checkPageAvaliability(url)) {
+			if (!helper.checkPageAvailability(url)) {
 				continue;
 			}
 
@@ -227,7 +227,7 @@ public class Bot {
 			String url = this.urlQueue.poll();
 			this.visitedUrls.add(url);
 
-			if (!helper.checkPageAvaliability(url)) {
+			if (!helper.checkPageAvailability(url)) {
 				continue;
 			}
 
