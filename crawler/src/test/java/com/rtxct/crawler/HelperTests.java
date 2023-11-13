@@ -5,7 +5,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.TestComponent;
 
 import com.rtxct.utils.Helper;
@@ -13,13 +13,14 @@ import com.rtxct.utils.Helper;
 @TestComponent
 public class HelperTests {
 
+  /** Properties */
   private Helper helper = new Helper();
 
   /**
    * Check if page is online.
    */
   @Test
-  public void checkPageAvailability() {
+  void testCheckPageAvailability() {
     String url = "https://google.com/";
 
     Assert.assertTrue(helper.checkPageAvailability(url));
@@ -29,7 +30,7 @@ public class HelperTests {
    * Format a base URL and a path together.
    */
   @Test
-  public void formatUrl() {
+  void testFormatUrl() {
     String baseUrl = "http://localhost/";
     String partialUrl = "/test/";
 
@@ -42,7 +43,7 @@ public class HelperTests {
    * Validates if given URL is valid.
    */
   @Test
-  public void validateUrl() {
+  void testValidateUrl() {
     String url = "http://localhost:0000";
 
     Assert.assertTrue(helper.validateURL(url));
@@ -52,7 +53,7 @@ public class HelperTests {
    * Merge two queues in one.
    */
   @Test
-  public void mergeQueues() {
+  void testMergeQueues() {
     Queue<String> base = new LinkedList<>(Arrays.asList("foo", "bar"));
     Queue<String> toMerge = new LinkedList<>(Arrays.asList("boo", "waa"));
 

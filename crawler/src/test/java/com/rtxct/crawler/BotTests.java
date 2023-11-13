@@ -39,7 +39,7 @@ public class BotTests {
    * initialize the properties that rely on the server URL.
    */
   @BeforeAll
-  void start() {
+  public void setup() {
     try {
       CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
         this.nginx = new NginxTestContainer();
@@ -69,7 +69,7 @@ public class BotTests {
    * After all the tests, stop the nginx testContainer server.
    */
   @AfterAll
-  void end() {
+  public void cleanup() {
     try {
       this.nginx.stopContainer();
     } catch (Exception e) {
@@ -82,7 +82,7 @@ public class BotTests {
    * mocked response (Crawls a single page).
    */
   @Test
-  void crawlSyncSimpleCrawling() {
+  public void testCrawlSyncSimpleCrawling() {
     this.bot = new Bot(url, 0);
     List<String> result = bot.crawlSync();
 
@@ -97,7 +97,7 @@ public class BotTests {
    * mocked response (Crawls multiple pages).
    */
   @Test
-  void crawlSyncFullCrawling() {
+  public void testCrawlSyncFullCrawling() {
     this.bot = new Bot(url, 1);
     List<String> result = bot.crawlSync();
 
@@ -113,7 +113,7 @@ public class BotTests {
    * mocked response (Crawls a single pages).
    */
   @Test
-  void crawlAsyncSimpleCrawling() {
+  public void testCrawlAsyncSimpleCrawling() {
     this.bot = new Bot(url, 0);
 
     CompletableFuture<List<String>> future = CompletableFuture.supplyAsync(() -> {
@@ -139,7 +139,7 @@ public class BotTests {
    * equal to the mocked response (Crawls multiple pages).
    */
   @Test
-  void crawlAsyncFullCrawling() {
+  public void testCrawlAsyncFullCrawling() {
     this.bot = new Bot(url, 1);
 
     CompletableFuture<List<String>> future = CompletableFuture.supplyAsync(() -> {

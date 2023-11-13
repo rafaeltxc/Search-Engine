@@ -68,7 +68,7 @@ public class NginxTestContainer {
   /**
    * Start Nginx testContainer.
    */
-  public void startContainer() {
+  private void startContainer() {
     try {
       this.nginx.start();
     } catch (Exception e) {
@@ -108,7 +108,7 @@ public class NginxTestContainer {
   /**
    * Holds the container up until it reaches the closing command.
    */
-  public void awaitTermination() {
+  private void awaitTermination() {
     try {
       countDown.await();
     } catch (Exception e) {
