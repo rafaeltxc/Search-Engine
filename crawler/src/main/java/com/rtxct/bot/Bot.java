@@ -31,11 +31,6 @@ import lombok.Setter;
  * Bot class with crawler logic and methods.
  */
 public class Bot {
-	public static void main(String[] args) {
-		// Testing
-		Bot test = new Bot(Arrays.asList("https://www.wikipedia.org/", "https://www.youtube.com/"), 1);
-		System.out.println(test.crawlAsync());
-	}
 
 	/** Class properties. */
 	private final Semaphore semaphore = new Semaphore(1);

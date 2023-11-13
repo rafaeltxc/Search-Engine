@@ -8,6 +8,9 @@ import java.net.MalformedURLException;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.springframework.stereotype.Component;
 import org.testcontainers.containers.NginxContainer;
@@ -17,32 +20,49 @@ import lombok.Data;
 
 @Data
 @Component
-@SuppressWarnings({ "resource" })
 public class NginxTestContainer {
 
+  public static void main(String[] args) {
+    new NginxTestContainer();
+  }
+
+  /** Class properties */
   private NginxContainer<?> nginx;
+
+  private ExecutorService executorService = Executors.newSingleThreadExecutor();
+
   private CountDownLatch countDown = new CountDownLatch(1);
-  private String tmpDirectory = String.format("%s/Search-Engine/crawler/src/main/resources/templates/",
+
+  private String tmpDirectory = String.format("%s/src/main/resources/templates/",
       System.getProperty("user.dir"));
 
   /**
    * NginxTestContainer class constructor.
    * 
-   * Create server configuration, start it, and after the container is up,
+   * Creates the server configuration, start it, and after the container is up,
    * configure the nginx html pages.
    */
   public NginxTestContainer() {
     try {
-      this.createServer();
+      executorService.execute(() -> {
+        this.createServer();
 
-      CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-        this.startContainer();
+        CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+          this.startContainer();
+        });
+
+        try {
+          future.get();
+        } catch (InterruptedException e) {
+          e.printStackTrace();
+          Thread.currentThread().interrupt();
+        } catch (ExecutionException e) {
+          e.printStackTrace();
+        }
+
+        this.pagesConfig();
+        this.awaitTermination();
       });
-
-      future.get();
-
-      this.pagesConfig();
-      this.awaitTermination();
     } catch (Exception e) {
       e.printStackTrace();
     }
@@ -64,13 +84,14 @@ public class NginxTestContainer {
    * Stop Nginx testContainer.
    */
   public void stopContainer() {
-    try {
-      if (nginx != null) {
+    if (nginx != null) {
+      try {
         this.nginx.close();
+        this.executorService.shutdown();
         this.countDown.countDown();
+      } catch (Exception e) {
+        e.printStackTrace();
       }
-    } catch (Exception e) {
-      e.printStackTrace();
     }
   }
 
@@ -103,13 +124,14 @@ public class NginxTestContainer {
   /**
    * Create and configure new Nginx testContainer.
    */
+  @SuppressWarnings({ "resource" })
   private void createServer() {
     this.nginx = new NginxContainer<>("nginx:1.20")
         .withFileSystemBind(tmpDirectory, "/usr/share/nginx/html")
         .withExposedPorts(80)
         .waitingFor(Wait.forHttp("/")
-            .forStatusCode(403))
-        .withStartupTimeout(Duration.ofSeconds(15));
+            .forStatusCodeMatching(response -> response == 200 || response == 403))
+        .withStartupTimeout(Duration.ofSeconds(10));
   }
 
   /**
@@ -152,10 +174,13 @@ public class NginxTestContainer {
 
       PrintStream printStreamIndex = new PrintStream(new FileOutputStream(indexFile));
       printStreamIndex.println(fmtIndex);
+      printStreamIndex.close();
 
       PrintStream printStreamLink = new PrintStream(new FileOutputStream(linkFile));
       printStreamLink.println(link);
+      printStreamLink.close();
     } catch (FileNotFoundException e) {
+      this.stopContainer();
       e.printStackTrace();
     }
 
