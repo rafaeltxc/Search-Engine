@@ -31,7 +31,6 @@ import lombok.Setter;
  * Bot class with crawler logic and methods.
  */
 public class Bot {
-
 	/** Class properties. */
 	private final Semaphore semaphore = new Semaphore(1);
 
