@@ -1,12 +1,42 @@
-# Search-Engine
-### On going Java project being built concurrently with [WebSocket-App](https://github.com/rafaeltxc/WebSocket-App). It will consist in a search engine like google and many others.
+# Web Crawler
+### Overview
+Ongoing project being built concurrently with [webSocket-backend-module](https://github.com/rafaeltxc/webSocket-backend-module).
 
-## About
-Possessing three different services:
- - API for Database connection.
- - Crawler to mantain the system updated.
- - API to communicate with the user.
+Java based Web Crawler program designed to navigate through the web and extract relevant data from various websites. It is built to be scalable, allowing it to handle diverse websites and provide a robust solution for data aggregation.
 
-All of them will be implemented together to build the search engine. The plans are to implement also a cache system like Redis, and a Search Engine Ranking Algorithm.
+### Features
+ - **Scalable Web Crawling**: The crawler is able to navigate through the web, extracting data from various websites, and providing a reliable mechanism for data aggregation.
+ 
+ - **Synchronous Operation**: The crawler operates synchronously, ensuring precise and ordered execution of tasks. Being beneficial for scenarios where sequential processing is crucial.
+ 
+ - **Asynchronous Operations**: For increased efficiency and faster data gathering, the crawler supports asynchronous operations, using concurrent processes to enhance performance.
+ 
+ - **API as a Service**: The project includes an API that allows users to use the web crawling capabilities as a service, making it convenient for integration into other applications.
 
-### This Readme will be altered as the project progresses.
+### Usage
+**Note**: The API is still in development. The program should work fine, but it is not possible to make requests.
+
+After cloning the respository, navigate to the project directory and initialize the project (Make sure you have Maven installed):
+```console
+mvn spring-boot:run
+```
+
+This will build and run the application using Maven. Alternatively, you can use your preferred tool to build and run the application.
+
+### How it works
+
+The crawling process operates on both single URLs and lists of URLs. efore execution, users can specify the operation breakpoint. In asynchronous crawling, the program allows users to indicate the number of CPU cores for concurrent processing.
+
+
+**Operation Breakpoints**:
+
+The breakpoint determines the depth of the crawling process. A breakpoint of 1 (default) crawls and scrapes only the given page(s). A breakpoint greater than one extends the crawling to all links found on the given pages recursively, stopping when the breakpoint is reached.
+
+**Note**: A breakpoint of 0 returns information only for the given page without scraping its URLs.
+
+
+**Asynchronous Operations**:
+
+In asynchronous mode, the program will create threads for concurrent execution, establishing an execution queue when the maximum number of active threads is reached. Each thread processes a URL, scrapes its data, and collects present links. Users can specify the number of CPU cores, and if not specified, the program utilizes all available cores.
+
+**Note**: Specifying more cores than your system has won't make it any faster, as each thread occupies one core.
