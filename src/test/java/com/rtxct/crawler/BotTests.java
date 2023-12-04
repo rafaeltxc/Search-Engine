@@ -13,10 +13,9 @@ import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.springframework.boot.test.context.TestComponent;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonParser;
-import com.rtxct.bot.Bot;
-import com.rtxct.utils.NginxTestContainer;
+import com.rtxct.crawler.bot.Bot;
+import com.rtxct.crawler.dto.PageDTO;
+import com.rtxct.crawler.utils.NginxTestContainer;
 
 @TestComponent
 @TestInstance(Lifecycle.PER_CLASS)
@@ -83,12 +82,11 @@ public class BotTests {
    */
   @Test
   public void testCrawlSyncSimpleCrawling() {
-    this.bot = new Bot(url, 0);
-    List<String> result = bot.crawlSync();
+    this.bot = new Bot(Arrays.asList(url), 0);
+    List<PageDTO> result = bot.crawlSync();
 
     result.forEach(str -> {
-      JsonElement json = JsonParser.parseString(str);
-      Assert.assertEquals(simpleCrawling, json);
+      Assert.assertEquals(simpleCrawling, str);
     });
   }
 
@@ -98,12 +96,11 @@ public class BotTests {
    */
   @Test
   public void testCrawlSyncFullCrawling() {
-    this.bot = new Bot(url, 1);
-    List<String> result = bot.crawlSync();
+    this.bot = new Bot(Arrays.asList(url), 1);
+    List<PageDTO> result = bot.crawlSync();
 
     for (int i = 0; i < result.size(); i++) {
-      JsonElement json = JsonParser.parseString(result.get(i));
-      Assert.assertEquals(fullCrawling.get(i), json);
+      Assert.assertEquals(fullCrawling.get(i), result.get(i));
     }
   }
 
@@ -114,18 +111,17 @@ public class BotTests {
    */
   @Test
   public void testCrawlAsyncSimpleCrawling() {
-    this.bot = new Bot(url, 0);
+    this.bot = new Bot(Arrays.asList(url), 0);
 
-    CompletableFuture<List<String>> future = CompletableFuture.supplyAsync(() -> {
+    CompletableFuture<List<PageDTO>> future = CompletableFuture.supplyAsync(() -> {
       return bot.crawlAsync(2);
     });
 
     try {
-      List<String> result = future.get();
+      List<PageDTO> result = future.get();
 
       result.forEach(str -> {
-        JsonElement json = JsonParser.parseString(str);
-        Assert.assertEquals(simpleCrawling, json);
+        Assert.assertEquals(simpleCrawling, str);
       });
     } catch (InterruptedException e) {
       e.printStackTrace();
@@ -140,18 +136,17 @@ public class BotTests {
    */
   @Test
   public void testCrawlAsyncFullCrawling() {
-    this.bot = new Bot(url, 1);
+    this.bot = new Bot(Arrays.asList(url), 1);
 
-    CompletableFuture<List<String>> future = CompletableFuture.supplyAsync(() -> {
+    CompletableFuture<List<PageDTO>> future = CompletableFuture.supplyAsync(() -> {
       return bot.crawlAsync(2);
     });
 
     try {
-      List<String> result = future.get();
+      List<PageDTO> result = future.get();
 
       for (int i = 0; i < result.size(); i++) {
-        JsonElement json = JsonParser.parseString(result.get(i));
-        Assert.assertEquals(fullCrawling.get(i), json);
+        Assert.assertEquals(fullCrawling.get(i), result.get(i));
       }
       ;
     } catch (InterruptedException e) {

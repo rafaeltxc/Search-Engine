@@ -1,8 +1,7 @@
-package com.rtxct.bot;
+package com.rtxct.crawler.bot;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
@@ -10,6 +9,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -17,28 +18,29 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
 
-import com.rtxct.model.Page;
-import com.rtxct.utils.Helper;
+import com.rtxct.crawler.dto.PageDTO;
+import com.rtxct.crawler.utils.Helper;
 
 import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter(AccessLevel.PUBLIC)
 @Setter(AccessLevel.NONE)
+@NoArgsConstructor
 @Component
-/**
- * Bot class with crawler logic and methods.
- */
 public class Bot {
 	/** Class properties. */
+	private static final Logger logger = Logger.getLogger(Bot.class.getName());
+
 	private final Semaphore semaphore = new Semaphore(1);
 
 	private ExecutorService executorService;
 
-	private int breakpoint;
+	private Integer breakpoint;
 
-	private List<String> pages;
+	private List<PageDTO> pages;
 
 	private List<String> visitedUrls;
 
@@ -49,28 +51,7 @@ public class Bot {
 	/** Class Dependencies. */
 	private Helper helper = new Helper();
 
-	private Page page;
-
-	/**
-	 * Bot class constructor.
-	 * 
-	 * @param rootUrl Single URL as a String.
-	 */
-	public Bot(String rootUrl) {
-		this(rootUrl, 0);
-	}
-
-	/**
-	 * Bot class constructor.
-	 * 
-	 * @param rootUrl    Single URL as a String.
-	 * @param breakpoint Limit how deep in the URLs the program should go.
-	 */
-	public Bot(String rootUrl, int breakpoint) {
-		this.breakpoint = breakpoint;
-		this.urlQueue = new LinkedList<String>(Arrays.asList(rootUrl));
-		propertiesInitializer();
-	}
+	private PageDTO page;
 
 	/**
 	 * Bot class constructor.
@@ -78,7 +59,7 @@ public class Bot {
 	 * @param rootUrlList List of URLs as Strings.
 	 */
 	public Bot(List<String> rootUrlList) {
-		this(rootUrlList, 0);
+		this(rootUrlList, 1);
 	}
 
 	/**
@@ -98,7 +79,7 @@ public class Bot {
 	 */
 	private void propertiesInitializer() {
 		this.visitedUrls = new ArrayList<String>();
-		this.pages = new ArrayList<String>();
+		this.pages = new ArrayList<PageDTO>();
 		this.tempUrlQueue = new LinkedList<String>();
 	}
 
@@ -109,7 +90,7 @@ public class Bot {
 	 * 
 	 * @return Pages objects in a json representation.
 	 */
-	public List<String> crawlAsync() {
+	public List<PageDTO> crawlAsync() {
 		int systemCores = Runtime.getRuntime().availableProcessors();
 		return crawlAsync(systemCores);
 	}
@@ -122,8 +103,7 @@ public class Bot {
 	 * @param maxThreads The maximum number of threads.
 	 * @return Pages objects in a json representation.
 	 */
-	public List<String> crawlAsync(int maxThreads) {
-
+	public List<PageDTO> crawlAsync(Integer maxThreads) {
 		this.executorService = Executors.newFixedThreadPool(maxThreads);
 		this.tempUrlQueue.clear();
 
@@ -144,8 +124,7 @@ public class Bot {
 	 * 
 	 * @return Pages objects in a json representation.
 	 */
-	public List<String> crawlSync() {
-
+	public List<PageDTO> crawlSync() {
 		this.tempUrlQueue.clear();
 
 		scrapeLinksSync();
@@ -183,8 +162,8 @@ public class Bot {
 						Element descDoc = doc.select("meta[name=description]").first();
 
 						String desc = (descDoc != null) ? descDoc.attr("content") : "";
-						page = new Page(title, desc, url);
-						this.pages.add(page.toJson());
+						page = PageDTO.builder().title(title).desc(desc).url(url).build();
+						this.pages.add(page);
 
 						Queue<String> returnedUrls = getLinks(doc, url);
 						if (returnedUrls != null) {
@@ -193,16 +172,17 @@ public class Bot {
 								this.tempUrlQueue = helper.mergeQueues(this.urlQueue, returnedUrls);
 							} catch (InterruptedException e) {
 								Thread.currentThread().interrupt();
+								logger.log(Level.INFO, "Semaphore error", e);
 							} finally {
 								this.semaphore.release();
 							}
 						}
 					} catch (IOException e) {
-						e.printStackTrace();
+						logger.log(Level.INFO, "ScrapeLinksAsync method error", e);
 					}
 				});
 			} catch (Exception e) {
-				e.printStackTrace();
+				logger.log(Level.INFO, "Executor error", e);
 			}
 		}
 
@@ -212,6 +192,7 @@ public class Bot {
 			this.executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
+			logger.log(Level.INFO, "Awaiting threads error", e);
 		}
 	}
 
@@ -236,15 +217,15 @@ public class Bot {
 				Element descDoc = doc.select("meta[name=description]").first();
 
 				String desc = (descDoc != null) ? descDoc.attr("content") : "";
-				page = new Page(title, desc, url);
-				this.pages.add(page.toJson());
+				page = PageDTO.builder().title(title).desc(desc).url(url).build();
+				this.pages.add(page);
 
 				Queue<String> returnedUrls = getLinks(doc, url);
 				if (returnedUrls != null) {
 					this.tempUrlQueue = helper.mergeQueues(this.urlQueue, returnedUrls);
 				}
 			} catch (IOException e) {
-				e.printStackTrace();
+				logger.log(Level.INFO, "ScrapeLinksSync method error", e);
 			}
 		}
 	}
@@ -257,25 +238,31 @@ public class Bot {
 	 * @return List of all the links founded.
 	 */
 	private Queue<String> getLinks(Document doc, String url) {
-		if (this.breakpoint == 0) {
+		if (this.breakpoint <= 0) {
 			return null;
 		}
 
-		Elements links = doc.select("a");
+		try {
+			Elements links = doc.select("a");
 
-		Queue<String> urls = new LinkedList<>();
-		links.forEach(element -> {
-			String href = element.attr("href");
+			Queue<String> urls = new LinkedList<>();
+			links.forEach(element -> {
+				String href = element.attr("href");
 
-			if (href.length() > 0) {
-				if (href.charAt(0) == '/') {
-					href = helper.formatUrl(url, href);
-				} else if (helper.validateURL(href) && !visitedUrls.contains(href)) {
-					urls.add(href);
+				if (href.length() > 0) {
+					if (href.charAt(0) == '/') {
+						href = helper.formatUrl(url, href);
+					} else if (helper.validateURL(href) && !visitedUrls.contains(href)) {
+						urls.add(href);
+					}
 				}
-			}
-		});
+			});
 
-		return urls;
+			return urls;
+		} catch (Exception e) {
+			e.printStackTrace();
+			logger.log(Level.INFO, "GetLinks method error", e);
+		}
+		return null;
 	}
 }

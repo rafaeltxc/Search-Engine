@@ -1,0 +1,5 @@
+File in constant change. Tasks for a short period of time related with the current feature being implemented.
+
+1_ Swagger
+
+2_ dockerfile

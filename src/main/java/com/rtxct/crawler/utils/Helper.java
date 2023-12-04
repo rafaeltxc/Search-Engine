@@ -1,4 +1,4 @@
-package com.rtxct.utils;
+package com.rtxct.crawler.utils;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -12,10 +12,6 @@ import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.springframework.stereotype.Component;
 
-/**
- * Helper class with separated methods to be used throughout the whole
- * application.
- */
 @Component
 public class Helper {
   /**

@@ -1,4 +1,4 @@
-package com.rtxct.utils;
+package com.rtxct.crawler.utils;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -12,14 +12,12 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.springframework.stereotype.Component;
 import org.testcontainers.containers.NginxContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 
 import lombok.Data;
 
 @Data
-@Component
 public class NginxTestContainer {
 
   /** Class properties */

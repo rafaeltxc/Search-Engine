@@ -8,7 +8,7 @@ import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.TestComponent;
 
-import com.rtxct.utils.Helper;
+import com.rtxct.crawler.utils.Helper;
 
 @TestComponent
 public class HelperTests {
