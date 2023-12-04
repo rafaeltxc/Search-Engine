@@ -52,6 +52,9 @@
     </dependency>
   </dependencies>
   <build>
+    <finalName>
+      crawler
+    </finalName>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

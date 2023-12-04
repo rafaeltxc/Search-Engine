@@ -1,0 +1,15 @@
+target/
+*.iml
+.idea/
+
+.git/
+.github/
+.gitignore
+
+mvnw
+mvnw.cmd
+
+.vscode/
+
+src/test/
+docs/
