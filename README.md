@@ -14,7 +14,6 @@ Java based Web Crawler program designed to navigate through the web and extract 
  - **API as a Service**: The project includes an API that allows users to use the web crawling capabilities as a service, making it convenient for integration into other applications.
 
 ### Usage
-**Note**: The API is still in development. The program should work fine, but it is not possible to make requests.
 
 After cloning the respository, navigate to the project directory and initialize the project (Make sure you have Maven installed):
 ```console
@@ -22,6 +21,10 @@ mvn spring-boot:run
 ```
 
 This will build and run the application using Maven. Alternatively, you can use your preferred tool to build and run the application.
+
+### Docker
+
+A docker image is also available in: [DockerHub](https://hub.docker.com/repository/docker/rtxct/crawler)
 
 ### How it works
 
