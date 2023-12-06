@@ -1,7 +1,5 @@
 # Web Crawler
 ### Overview
-Ongoing project being built concurrently with [webSocket-backend-module](https://github.com/rafaeltxc/webSocket-backend-module).
-
 Java based Web Crawler program designed to navigate through the web and extract relevant data from various websites. It is built to be scalable, allowing it to handle diverse websites and provide a robust solution for data aggregation.
 
 ### Features
