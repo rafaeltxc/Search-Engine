@@ -1,6 +1,6 @@
 FROM maven:3.9.5-eclipse-temurin-17-alpine
 
-ENV WEB_CRAWLER_PROJECT=/usr/src/app/logfile.log
+ENV WEB_CRAWLER_PROJECT=/usr/src/app/
 
 WORKDIR /usr/src/app
 
