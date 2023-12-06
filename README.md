@@ -22,6 +22,11 @@ mvn spring-boot:run
 
 This will build and run the application using Maven. Alternatively, you can use your preferred tool to build and run the application.
 
+To access the API documentation, in the container hosted port, open the app home page in your browser:
+```console
+http://localhost:8080/
+```
+
 ### Docker
 
 A docker image is also available in: [DockerHub](https://hub.docker.com/repository/docker/rtxct/crawler)
