@@ -9,13 +9,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import com.rtxct.crawler.dto.PageDTO;
@@ -32,7 +32,7 @@ import lombok.Setter;
 @Component
 public class Bot {
 	/** Class properties. */
-	private static final Logger logger = Logger.getLogger(Bot.class.getName());
+	private static final Logger logger = LoggerFactory.getLogger(Bot.class.getName());
 
 	private final Semaphore semaphore = new Semaphore(1);
 
@@ -172,17 +172,17 @@ public class Bot {
 								this.tempUrlQueue = helper.mergeQueues(this.urlQueue, returnedUrls);
 							} catch (InterruptedException e) {
 								Thread.currentThread().interrupt();
-								logger.log(Level.INFO, "Semaphore error", e);
+								logger.error("Semaphore error", e);
 							} finally {
 								this.semaphore.release();
 							}
 						}
 					} catch (IOException e) {
-						logger.log(Level.INFO, "ScrapeLinksAsync method error", e);
+						logger.error("ScrapeLinksAsync method error", e);
 					}
 				});
 			} catch (Exception e) {
-				logger.log(Level.INFO, "Executor error", e);
+				logger.error("Executor error", e);
 			}
 		}
 
@@ -192,7 +192,7 @@ public class Bot {
 			this.executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
-			logger.log(Level.INFO, "Awaiting threads error", e);
+			logger.error("Awaiting threads error", e);
 		}
 	}
 
@@ -225,7 +225,7 @@ public class Bot {
 					this.tempUrlQueue = helper.mergeQueues(this.urlQueue, returnedUrls);
 				}
 			} catch (IOException e) {
-				logger.log(Level.INFO, "ScrapeLinksSync method error", e);
+				logger.error("ScrapeLinksSync method error", e);
 			}
 		}
 	}
@@ -260,8 +260,7 @@ public class Bot {
 
 			return urls;
 		} catch (Exception e) {
-			e.printStackTrace();
-			logger.log(Level.INFO, "GetLinks method error", e);
+			logger.error("GetLinks method error", e);
 		}
 		return null;
 	}
