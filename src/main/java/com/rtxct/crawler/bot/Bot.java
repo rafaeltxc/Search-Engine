@@ -2,6 +2,7 @@ package com.rtxct.crawler.bot;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
@@ -31,6 +32,11 @@ import lombok.Setter;
 @NoArgsConstructor
 @Component
 public class Bot {
+
+	public static void main(String[] args) {
+		System.out.println(new Bot(Arrays.asList("https://google.com", "https://www.youtube.com")).crawlSync());
+	}
+
 	/** Class properties. */
 	private static final Logger logger = LoggerFactory.getLogger(Bot.class.getName());
 
@@ -111,7 +117,7 @@ public class Bot {
 		this.breakpoint--;
 
 		if (this.tempUrlQueue.size() > 0) {
-			urlQueue.addAll(tempUrlQueue);
+			this.urlQueue = new LinkedList<>(this.tempUrlQueue);
 			return crawlAsync(maxThreads);
 		}
 
@@ -132,7 +138,7 @@ public class Bot {
 		this.breakpoint--;
 
 		if (tempUrlQueue.size() > 0) {
-			this.urlQueue.addAll(tempUrlQueue);
+			this.urlQueue = new LinkedList<>(this.tempUrlQueue);
 			return crawlSync();
 		}
 
@@ -169,7 +175,7 @@ public class Bot {
 						if (returnedUrls != null) {
 							try {
 								this.semaphore.acquire();
-								this.tempUrlQueue = helper.mergeQueues(this.urlQueue, returnedUrls);
+								this.tempUrlQueue = helper.mergeQueues(this.tempUrlQueue, returnedUrls);
 							} catch (InterruptedException e) {
 								Thread.currentThread().interrupt();
 								logger.error("Semaphore error", e);
@@ -222,7 +228,7 @@ public class Bot {
 
 				Queue<String> returnedUrls = getLinks(doc, url);
 				if (returnedUrls != null) {
-					this.tempUrlQueue = helper.mergeQueues(this.urlQueue, returnedUrls);
+					this.tempUrlQueue = helper.mergeQueues(this.tempUrlQueue, returnedUrls);
 				}
 			} catch (IOException e) {
 				logger.error("ScrapeLinksSync method error", e);
